@@ -1,19 +1,20 @@
-import asyncio
 import sys
 from pathlib import Path
 
+from fastapi import FastAPI, Request
 from mcp.server import Server
-from mcp.server.stdio import stdio_server
+from mcp.server.sse import SseServerTransport
 from mcp.types import TextContent, Tool
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from mcp2_orchestrator.agent import Agent
 from mcp2_orchestrator.mcp1_client import Mcp1Client
 
-app = Server("mcp2-orchestrator")
+mcp_app = Server("mcp2-orchestrator")
+sse_transport = SseServerTransport("/messages/")
 
 
-@app.list_tools()
+@mcp_app.list_tools()
 async def list_tools() -> list[Tool]:
     return [
         Tool(
@@ -37,7 +38,7 @@ async def list_tools() -> list[Tool]:
     ]
 
 
-@app.call_tool()
+@mcp_app.call_tool()
 async def call_tool(name: str, arguments: dict) -> list[TextContent]:
     if name != "ask":
         raise ValueError(f"Unknown tool: {name}")
@@ -49,10 +50,21 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
     return [TextContent(type="text", text=answer)]
 
 
-async def main():
-    async with stdio_server() as (read_stream, write_stream):
-        await app.run(read_stream, write_stream, app.create_initialization_options())
+app = FastAPI()
 
 
-if __name__ == "__main__":
-    asyncio.run(main())
+@app.get("/sse")
+async def handle_sse(request: Request):
+    async with sse_transport.connect_sse(
+        request.scope, request.receive, request._send
+    ) as streams:
+        await mcp_app.run(
+            streams[0], streams[1], mcp_app.create_initialization_options()
+        )
+
+
+async def _messages_app(scope, receive, send):
+    await sse_transport.handle_post_message(scope, receive, send)
+
+
+app.mount("/messages", _messages_app)

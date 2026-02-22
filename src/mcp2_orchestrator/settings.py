@@ -9,8 +9,9 @@ class Settings(BaseSettings):
     azure_openai_api_version: str = "2025-01-01-preview"
     azure_chat_deployment: str = "gpt-4.1"
 
-    # Absolute path to MCP 1 server script
-    mcp1_server_path: str
+    # URL of the MCP 1 HTTP/SSE server
+    mcp1_url: str = "http://localhost:8001"
+    mcp2_port: int = 8002
 
 
 settings = Settings()

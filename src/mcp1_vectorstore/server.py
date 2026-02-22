@@ -1,11 +1,12 @@
-import asyncio
 import json
 import sys
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 import numpy as np
+from fastapi import FastAPI, Request
 from mcp.server import Server
-from mcp.server.stdio import stdio_server
+from mcp.server.sse import SseServerTransport
 from mcp.types import TextContent, Tool
 from openai import AsyncAzureOpenAI
 
@@ -25,7 +26,8 @@ DOCUMENTS = [
     "Acme is in early talks with a European distributor, Munich-based RoboLogistik GmbH, to expand into the EU market in 2026.",
 ]
 
-app = Server("mcp1-vectorstore")
+mcp_app = Server("mcp1-vectorstore")
+sse_transport = SseServerTransport("/messages/")
 
 # Populated at startup
 _doc_matrix: np.ndarray | None = None
@@ -41,7 +43,7 @@ async def embed(texts: list[str]) -> np.ndarray:
     return np.array(vectors, dtype=np.float32)
 
 
-@app.list_tools()
+@mcp_app.list_tools()
 async def list_tools() -> list[Tool]:
     return [
         Tool(
@@ -68,7 +70,7 @@ async def list_tools() -> list[Tool]:
     ]
 
 
-@app.call_tool()
+@mcp_app.call_tool()
 async def call_tool(name: str, arguments: dict) -> list[TextContent]:
     if name == "list_documents":
         results = [
@@ -99,20 +101,33 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
     raise ValueError(f"Unknown tool: {name}")
 
 
-async def main():
+@asynccontextmanager
+async def lifespan(app: FastAPI):
     global _doc_matrix, _client
-
     _client = AsyncAzureOpenAI(
         azure_endpoint=settings.azure_openai_endpoint,
         api_key=settings.azure_openai_api_key,
         api_version=settings.azure_openai_api_version,
     )
-
     _doc_matrix = await embed(DOCUMENTS)
-
-    async with stdio_server() as (read_stream, write_stream):
-        await app.run(read_stream, write_stream, app.create_initialization_options())
+    yield
 
 
-if __name__ == "__main__":
-    asyncio.run(main())
+app = FastAPI(lifespan=lifespan)
+
+
+@app.get("/sse")
+async def handle_sse(request: Request):
+    async with sse_transport.connect_sse(
+        request.scope, request.receive, request._send
+    ) as streams:
+        await mcp_app.run(
+            streams[0], streams[1], mcp_app.create_initialization_options()
+        )
+
+
+async def _messages_app(scope, receive, send):
+    await sse_transport.handle_post_message(scope, receive, send)
+
+
+app.mount("/messages", _messages_app)
