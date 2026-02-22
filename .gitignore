@@ -2,5 +2,4 @@
 .env
 __pycache__/
 extension/lib/
-*.dxt
 *.mcpb

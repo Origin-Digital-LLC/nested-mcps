@@ -1,6 +1,6 @@
 DIR := $(shell pwd)
 
-.PHONY: install init-env check run-mcp1 run-mcp2 run-all claude-config pack
+.PHONY: install init-env check run-mcp1 run-mcp2 claude-config pack
 
 install:
 	uv sync
