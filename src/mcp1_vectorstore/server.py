@@ -73,9 +73,7 @@ async def list_tools() -> list[Tool]:
 @mcp_app.call_tool()
 async def call_tool(name: str, arguments: dict) -> list[TextContent]:
     if name == "list_documents":
-        results = [
-            {"doc_id": i, "content": doc} for i, doc in enumerate(DOCUMENTS)
-        ]
+        results = [{"doc_id": i, "content": doc} for i, doc in enumerate(DOCUMENTS)]
         return [TextContent(type="text", text=json.dumps(results))]
 
     if name == "search":

@@ -1,18 +1,11 @@
 DIR := $(shell pwd)
 
-.PHONY: install init-env check run-mcp1 run-mcp2 claude-config pack
+.PHONY: fix check run-mcp1 run-mcp2 claude-config pack
 
-install:
-	uv sync
-
-# Create .env from template
-init-env:
-	@if [ -f .env ]; then \
-		echo ".env already exists"; \
-	else \
-		cp .env.example .env; \
-		echo "Created .env — fill in your Azure credentials"; \
-	fi
+# Auto-format and fix lint issues in all Python files
+fix:
+	uv run ruff format src
+	uv run ruff check --fix src
 
 # Verify .env is present and both settings classes load without error
 check:

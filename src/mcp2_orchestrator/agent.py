@@ -8,8 +8,8 @@ from typing import Literal
 from openai import AsyncAzureOpenAI
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
-from mcp2_orchestrator.settings import settings
 from mcp2_orchestrator.mcp1_client import Mcp1Client
+from mcp2_orchestrator.settings import settings
 
 MAX_ITERATIONS = 10
 
@@ -220,6 +220,7 @@ class Agent:
             tool_results: list[dict] = []
 
             if search_calls:
+
                 async def _search(tc):
                     args = json.loads(tc.function.arguments)
                     results = await self._mcp1.search(
@@ -231,7 +232,9 @@ class Agent:
                         "content": json.dumps(results),
                     }
 
-                search_results = await asyncio.gather(*[_search(tc) for tc in search_calls])
+                search_results = await asyncio.gather(
+                    *[_search(tc) for tc in search_calls]
+                )
                 tool_results.extend(search_results)
 
             # Process non-search tool calls sequentially (they mutate scratchpad)
