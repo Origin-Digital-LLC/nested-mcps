@@ -11,7 +11,7 @@ Claude Desktop
 [stdio proxy]              ← spawned by Claude Desktop, bridges stdio ↔ HTTP
      │  HTTP/SSE (:8002)
      ▼
-MCP 2: Orchestrator        ← FastAPI/uvicorn, exposed on internal network
+MCP 2: Orchestrator        ← FastAPI/uvicorn, runs on the server
      │  HTTP/SSE (:8001)
      ▼
 MCP 1: Vector Store        ← FastAPI/uvicorn, internal only
@@ -21,7 +21,7 @@ MCP 1: Vector Store        ← FastAPI/uvicorn, internal only
 
 **MCP 2 (`mcp2_orchestrator`)** runs an agentic reasoning loop using GPT-4.1 via Azure AI Foundry. It exposes a single `ask` tool via HTTP/SSE, decomposes questions into tasks, retrieves against MCP 1 over HTTP, and synthesizes a final answer. Independent tasks are dispatched in parallel via `asyncio.gather`.
 
-**The proxy** (`dxt/server/proxy.py`) is a thin stdio↔HTTP bridge packaged as a Claude Desktop Extension (`.dxt`). Claude Desktop spawns it locally; it connects to MCP 2 over the network. This is the only piece that runs on client machines.
+**The proxy** (`extension/server/proxy.py`) is a thin stdio↔HTTP bridge. Claude Desktop spawns it locally; it connects to MCP 2 over the network. This is the only piece that runs on client machines.
 
 ## Project Structure
 
@@ -35,7 +35,7 @@ src/
     ├── mcp1_client.py    # HTTP/SSE client wrapping MCP 1
     ├── agent.py          # Agentic loop: scratchpad, task planning, parallel search
     └── server.py         # FastAPI/SSE: exposes the ask tool
-dxt/
+extension/
 ├── manifest.json         # Claude Desktop Extension manifest
 └── server/
     └── proxy.py          # stdio ↔ HTTP/SSE bridge (runs on client machines)
@@ -58,38 +58,38 @@ cp .env.example .env
 
 ### 3. Start the servers
 
-In two separate terminals (or `make -j2 run-mcp1 run-mcp2`):
+In two separate terminals:
 
 ```bash
 make run-mcp1   # vector store on http://0.0.0.0:8001
 make run-mcp2   # orchestrator on http://0.0.0.0:8002
 ```
 
-## Claude Desktop Installation (via .dxt)
+## Connecting Claude Desktop (local dev)
 
-The `.dxt` file packages the proxy and all Python dependencies into a single installable extension. Build it once; distribute the file.
+Run `make claude-config` to print the config block, then paste it into `%APPDATA%\Claude\claude_desktop_config.json` and restart Claude Desktop.
 
-### Prerequisites (build machine only)
+This spawns `proxy.py` via WSL, which connects to MCP 2 over HTTP. Both servers must be running first.
+
+## Enterprise Deployment (claude.ai)
+
+For enterprise claude.ai, no proxy or client-side installation is needed:
+
+1. Deploy MCP 2 on an internal server with a publicly reachable HTTPS URL
+2. An org admin adds the URL once: **claude.ai → Settings → Connectors → Add custom connector**
+3. Users click to enable it — no URL entry, no configuration
+
+MCP 1 stays internal; only MCP 2 needs to be reachable from Anthropic's servers.
+
+## Distributing via Claude Desktop Extension (.mcpb)
+
+Any Claude Desktop user — not just local dev — needs the proxy to connect to an internal server, since Claude Desktop only speaks stdio. The `.mcpb` packages the proxy and all Python dependencies into a one-click install.
 
 ```bash
-npm install -g @anthropic-ai/dxt
+make pack   # produces acme-orchestrator-proxy.mcpb
 ```
 
-### Build the extension
-
-```bash
-make pack-dxt
-```
-
-This runs `uv pip install --target dxt/lib mcp httpx anyio` to bundle Python deps, then `dxt pack dxt/` to produce `acme-orchestrator-proxy.dxt`.
-
-### Install on each client machine
-
-1. Copy `acme-orchestrator-proxy.dxt` to the client (email, internal portal, etc.)
-2. Double-click it in Windows Explorer — Claude Desktop installs it automatically
-3. Restart Claude Desktop
-
-The extension connects to `http://127.0.0.1:8002` by default. To point at an internal server instead, update `MCP2_URL` in `dxt/manifest.json` before running `make pack-dxt`.
+Before packing, update `MCP2_URL` in `extension/manifest.json` to point at your internal server (e.g. `http://mcp.acme-internal.com:8002`). Distribute the `.mcpb` to users — they double-click it in Windows Explorer and Claude Desktop installs it automatically.
 
 ## Tools
 
