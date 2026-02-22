@@ -1,5 +1,6 @@
 import asyncio
 import json
+import logging
 from dataclasses import dataclass, field
 from typing import Literal, cast
 
@@ -11,6 +12,8 @@ from openai.types.chat.chat_completion_message_tool_call import (
 
 from mcp2_orchestrator.mcp1_client import Mcp1Client
 from mcp2_orchestrator.settings import settings
+
+logger = logging.getLogger(__name__)
 
 MAX_ITERATIONS = 10
 
@@ -183,10 +186,12 @@ class Agent:
         )
 
     async def run(self, question: str) -> str:
+        logger.info("Agent starting — question: %r", question)
         scratchpad = Scratchpad(question=question)
         messages: list[dict] = []
 
         for iteration in range(MAX_ITERATIONS):
+            logger.debug("Iteration %d", iteration)
             system_content = (
                 SYSTEM_PROMPT
                 + "\n\n--- Current Scratchpad ---\n"
@@ -228,6 +233,11 @@ class Agent:
 
                 async def _search(tc):
                     args = json.loads(tc.function.arguments)
+                    logger.info(
+                        "Invoking tool: search_knowledge  query=%r  top_k=%s",
+                        args["query"],
+                        args.get("top_k", 3),
+                    )
                     results = await self._mcp1.search(
                         query=args["query"], top_k=args.get("top_k", 3)
                     )
@@ -249,6 +259,11 @@ class Agent:
                 fn = tc.function.name
 
                 if fn == "add_task":
+                    logger.info(
+                        "Invoking tool: add_task  description=%r  depends_on=%s",
+                        args["description"],
+                        args.get("depends_on", []),
+                    )
                     task_id = scratchpad.add_task(
                         description=args["description"],
                         depends_on=args.get("depends_on", []),
@@ -262,6 +277,9 @@ class Agent:
                     )
 
                 elif fn == "complete_task":
+                    logger.info(
+                        "Invoking tool: complete_task  task_id=%s", args["task_id"]
+                    )
                     scratchpad.complete_task(args["task_id"], args["result"])
                     tool_results.append(
                         {
@@ -272,6 +290,7 @@ class Agent:
                     )
 
                 elif fn == "finish":
+                    logger.info("Invoking tool: finish")
                     scratchpad.final_answer = args["answer"]
                     tool_results.append(
                         {

@@ -1,4 +1,5 @@
 import json
+import logging
 from contextlib import asynccontextmanager
 
 import numpy as np
@@ -9,6 +10,9 @@ from mcp.types import TextContent, Tool
 from openai import AsyncAzureOpenAI
 
 from mcp1_vectorstore.settings import settings
+
+logging.basicConfig(level=logging.INFO, format="%(levelname)s:%(name)s: %(message)s")
+logger = logging.getLogger(__name__)
 
 DOCUMENTS = [
     "Acme Robotics was founded in 2019 by CEO Dana Holt, formerly a principal engineer at Boston Dynamics.",
@@ -78,6 +82,7 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
     if name == "search":
         query = arguments["query"]
         top_k = int(arguments.get("top_k", 3))
+        logger.info("Searching: %r  (top_k=%d)", query, top_k)
 
         query_vec = (await embed([query]))[0]
         if _doc_matrix is None:
@@ -105,12 +110,16 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global _doc_matrix, _client
+    logger.info(
+        "Initializing mcp1-vectorstore: embedding %d documents…", len(DOCUMENTS)
+    )
     _client = AsyncAzureOpenAI(
         azure_endpoint=settings.azure_openai_endpoint,
         api_key=settings.azure_openai_api_key,
         api_version=settings.azure_openai_api_version,
     )
     _doc_matrix = await embed(DOCUMENTS)
+    logger.info("mcp1-vectorstore ready")
     yield
 
 

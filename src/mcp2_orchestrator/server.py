@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import FastAPI, Request
 from mcp.server import Server
 from mcp.server.sse import SseServerTransport
@@ -5,6 +7,9 @@ from mcp.types import TextContent, Tool
 
 from mcp2_orchestrator.agent import Agent
 from mcp2_orchestrator.mcp1_client import Mcp1Client
+
+logging.basicConfig(level=logging.INFO, format="%(levelname)s:%(name)s: %(message)s")
+logger = logging.getLogger(__name__)
 
 mcp_app = Server("mcp2-orchestrator")
 sse_transport = SseServerTransport("/messages/")
@@ -40,9 +45,11 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
         raise ValueError(f"Unknown tool: {name}")
 
     question = arguments["question"]
+    logger.info("ask: %r", question)
     mcp1 = Mcp1Client()
     agent = Agent(mcp1)
     answer = await agent.run(question)
+    logger.info("answer: %s", answer)
     return [TextContent(type="text", text=answer)]
 
 

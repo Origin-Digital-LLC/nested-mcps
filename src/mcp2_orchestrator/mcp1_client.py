@@ -1,10 +1,13 @@
 import json
+import logging
 
 from mcp import ClientSession
 from mcp.client.sse import sse_client
 from mcp.types import TextContent
 
 from mcp2_orchestrator.settings import settings
+
+logger = logging.getLogger(__name__)
 
 
 class Mcp1Client:
@@ -14,6 +17,7 @@ class Mcp1Client:
         self._mcp1_url = settings.mcp1_url
 
     async def search(self, query: str, top_k: int = 3) -> list[dict]:
+        logger.info("Calling mcp1 search  query=%r  top_k=%d", query, top_k)
         async with sse_client(f"{self._mcp1_url}/sse") as (read, write):
             async with ClientSession(read, write) as session:
                 await session.initialize()
