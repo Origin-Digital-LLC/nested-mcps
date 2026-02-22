@@ -35,6 +35,8 @@ _client: AsyncAzureOpenAI | None = None
 
 
 async def embed(texts: list[str]) -> np.ndarray:
+    if _client is None:
+        raise RuntimeError("embed() called before lifespan initialized _client")
     response = await _client.embeddings.create(
         input=texts,
         model=settings.azure_embedding_deployment,
@@ -81,6 +83,10 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
         top_k = int(arguments.get("top_k", 3))
 
         query_vec = (await embed([query]))[0]
+        if _doc_matrix is None:
+            raise RuntimeError(
+                "call_tool() called before lifespan initialized _doc_matrix"
+            )
         norms = np.linalg.norm(_doc_matrix, axis=1)
         scores = np.dot(_doc_matrix, query_vec) / (
             norms * np.linalg.norm(query_vec) + 1e-10

@@ -15,4 +15,4 @@ class Settings(BaseSettings):
     mcp1_port: int = 8001
 
 
-settings = Settings()
+settings = Settings()  # type: ignore[call-arg]

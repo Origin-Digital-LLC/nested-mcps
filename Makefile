@@ -1,11 +1,16 @@
 DIR := $(shell pwd)
 
-.PHONY: fix check run-mcp1 run-mcp2 claude-config pack
+.PHONY: fix lint check run-mcp1 run-mcp2 claude-config pack
 
 # Auto-format and fix lint issues in all Python files
 fix:
 	uv run ruff format src
 	uv run ruff check --fix src
+
+# Run ruff lint check and ty type check
+lint:
+	uv run ruff check src
+	uv run ty check src
 
 # Verify .env is present and both settings classes load without error
 check:

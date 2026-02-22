@@ -4,6 +4,7 @@ from pathlib import Path
 
 from mcp import ClientSession
 from mcp.client.sse import sse_client
+from mcp.types import TextContent
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from mcp2_orchestrator.settings import settings
@@ -22,11 +23,21 @@ class Mcp1Client:
                 result = await session.call_tool(
                     "search", {"query": query, "top_k": top_k}
                 )
-                return json.loads(result.content[0].text)
+                content = result.content[0]
+                if not isinstance(content, TextContent):
+                    raise RuntimeError(
+                        f"Expected TextContent from search, got {type(content)}"
+                    )
+                return json.loads(content.text)
 
     async def list_documents(self) -> list[dict]:
         async with sse_client(f"{self._mcp1_url}/sse") as (read, write):
             async with ClientSession(read, write) as session:
                 await session.initialize()
                 result = await session.call_tool("list_documents", {})
-                return json.loads(result.content[0].text)
+                content = result.content[0]
+                if not isinstance(content, TextContent):
+                    raise RuntimeError(
+                        f"Expected TextContent from list_documents, got {type(content)}"
+                    )
+                return json.loads(content.text)

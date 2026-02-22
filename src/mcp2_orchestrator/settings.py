@@ -18,4 +18,4 @@ class Settings(BaseSettings):
     mcp2_port: int = 8002
 
 
-settings = Settings()
+settings = Settings()  # type: ignore[call-arg]

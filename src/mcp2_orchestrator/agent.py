@@ -3,9 +3,13 @@ import json
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Literal
+from typing import Literal, cast
 
 from openai import AsyncAzureOpenAI
+from openai.types.chat import ChatCompletionToolParam
+from openai.types.chat.chat_completion_message_tool_call import (
+    ChatCompletionMessageToolCall,
+)
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from mcp2_orchestrator.mcp1_client import Mcp1Client
@@ -195,7 +199,7 @@ class Agent:
             response = await self._llm.chat.completions.create(
                 model=settings.azure_chat_deployment,
                 messages=[{"role": "system", "content": system_content}] + messages,
-                tools=TOOL_SCHEMAS,
+                tools=cast(list[ChatCompletionToolParam], TOOL_SCHEMAS),
                 tool_choice="auto",
             )
 
@@ -211,7 +215,11 @@ class Agent:
             # Collect parallel search_knowledge calls, execute concurrently
             search_calls = []
             non_search_calls = []
-            for tc in msg.tool_calls:
+            for tc in [
+                tc
+                for tc in msg.tool_calls
+                if isinstance(tc, ChatCompletionMessageToolCall)
+            ]:
                 if tc.function.name == "search_knowledge":
                     search_calls.append(tc)
                 else:
