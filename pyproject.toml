@@ -9,6 +9,9 @@ dependencies = [
     "openai",
     "numpy",
     "pydantic-settings",
+    "fastapi",
+    "uvicorn[standard]",
+    "httpx",
 ]
 
 [project.scripts]
