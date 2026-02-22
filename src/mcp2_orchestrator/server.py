@@ -1,12 +1,8 @@
-import sys
-from pathlib import Path
-
 from fastapi import FastAPI, Request
 from mcp.server import Server
 from mcp.server.sse import SseServerTransport
 from mcp.types import TextContent, Tool
 
-sys.path.insert(0, str(Path(__file__).parent.parent))
 from mcp2_orchestrator.agent import Agent
 from mcp2_orchestrator.mcp1_client import Mcp1Client
 

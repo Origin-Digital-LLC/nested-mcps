@@ -15,16 +15,16 @@ lint:
 # Verify .env is present and both settings classes load without error
 check:
 	@test -f .env || (echo "ERROR: .env not found — run 'make init-env' first" && exit 1)
-	@uv run python -c "import sys; sys.path.insert(0, 'src'); from mcp1_vectorstore.settings import Settings; Settings(); print('MCP1 OK')"
-	@uv run python -c "import sys; sys.path.insert(0, 'src'); from mcp2_orchestrator.settings import Settings; Settings(); print('MCP2 OK')"
+	@uv run python -c "from mcp1_vectorstore.settings import Settings; Settings(); print('MCP1 OK')"
+	@uv run python -c "from mcp2_orchestrator.settings import Settings; Settings(); print('MCP2 OK')"
 
 # Start MCP 1 vector store server (HTTP on port 8001 — internal only)
 run-mcp1:
-	uv run uvicorn mcp1_vectorstore.server:app --host 0.0.0.0 --port 8001 --app-dir src
+	uv run uvicorn mcp1_vectorstore.server:app --host 0.0.0.0 --port 8001
 
 # Start MCP 2 orchestrator server (HTTP on port 8002)
 run-mcp2:
-	uv run uvicorn mcp2_orchestrator.server:app --host 0.0.0.0 --port 8002 --app-dir src
+	uv run uvicorn mcp2_orchestrator.server:app --host 0.0.0.0 --port 8002
 
 # Bundle Python deps into extension/lib/ and pack into a .mcpb file
 pack:

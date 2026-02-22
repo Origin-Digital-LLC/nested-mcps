@@ -1,7 +1,5 @@
 import json
-import sys
 from contextlib import asynccontextmanager
-from pathlib import Path
 
 import numpy as np
 from fastapi import FastAPI, Request
@@ -10,7 +8,6 @@ from mcp.server.sse import SseServerTransport
 from mcp.types import TextContent, Tool
 from openai import AsyncAzureOpenAI
 
-sys.path.insert(0, str(Path(__file__).parent.parent))
 from mcp1_vectorstore.settings import settings
 
 DOCUMENTS = [

@@ -1,12 +1,9 @@
 import json
-import sys
-from pathlib import Path
 
 from mcp import ClientSession
 from mcp.client.sse import sse_client
 from mcp.types import TextContent
 
-sys.path.insert(0, str(Path(__file__).parent.parent))
 from mcp2_orchestrator.settings import settings
 
 

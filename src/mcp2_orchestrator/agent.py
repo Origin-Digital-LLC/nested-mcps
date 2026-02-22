@@ -1,8 +1,6 @@
 import asyncio
 import json
-import sys
 from dataclasses import dataclass, field
-from pathlib import Path
 from typing import Literal, cast
 
 from openai import AsyncAzureOpenAI
@@ -11,7 +9,6 @@ from openai.types.chat.chat_completion_message_tool_call import (
     ChatCompletionMessageToolCall,
 )
 
-sys.path.insert(0, str(Path(__file__).parent.parent))
 from mcp2_orchestrator.mcp1_client import Mcp1Client
 from mcp2_orchestrator.settings import settings
 
